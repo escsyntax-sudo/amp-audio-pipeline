@@ -1,0 +1,60 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./node-api
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-replace-this-secret-before-exposing}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      STORAGE_DIR: /data/uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-209715200}
+      MAX_CHUNK_BYTES: ${MAX_CHUNK_BYTES:-8388608}
+      QUEUE_NAME: amp-transcribe
+      EVENTS_CHANNEL: amp:events
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./py-worker
+    environment:
+      REDIS_URL: redis://redis:6379
+      QUEUE_NAME: amp-transcribe
+      EVENTS_CHANNEL: amp:events
+      AMP_STORAGE_ROOT: /data/uploads
+      AMP_OUTPUT_DIR: /data/results
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+      TTS_ENABLED: ${TTS_ENABLED:-false}
+    volumes:
+      - uploads:/data/uploads
+      - results:/data/results
+      - models:/models
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis-data:
+  uploads:
+  results:
+  models:

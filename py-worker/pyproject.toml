@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amp-worker"
+version = "0.1.0"
+description = "Transcription, diarization and speech readback worker for the AMP pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "bullmq>=2.8,<3",
+    "redis>=5,<7",
+    "numpy>=2,<3",
+    "faster-whisper>=1.1,<2",
+    "pyttsx3>=2.90,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[tool.setuptools.packages.find]
+include = ["amp_worker*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
